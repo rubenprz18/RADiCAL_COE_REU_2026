@@ -67,6 +67,9 @@ RadicalDetectorMessenger::RadicalDetectorMessenger(
   fPbGlass = new G4UIcmdWithABool("/radical/geo/pbglass", this);
   fCounters = new G4UIcmdWithABool("/radical/geo/counters", this);
 
+  fCheckOverlaps = new G4UIcmdWithABool("/radical/geo/checkOverlaps", this);
+  fCheckOverlaps->SetGuidance("Print a per-volume overlap check at construction");
+
   fUpdate = new G4UIcmdWithoutParameter("/radical/geo/update", this);
   fUpdate->SetGuidance("Rebuild the geometry after changing parameters");
 
@@ -85,7 +88,8 @@ RadicalDetectorMessenger::~RadicalDetectorMessenger() {
   delete fPreset; delete fShape; delete fLayout; delete fTiling;
   delete fNx; delete fNy; delete fSizeX; delete fSizeY; delete fHexR;
   delete fTyvek; delete fBeamline; delete fMCP; delete fPbGlass;
-  delete fCounters; delete fUpdate; delete fYieldScale; delete fMaxPhotons;
+  delete fCounters; delete fCheckOverlaps; delete fUpdate;
+  delete fYieldScale; delete fMaxPhotons;
   delete fGeoDir; delete fOptDir;
 }
 
@@ -125,6 +129,8 @@ void RadicalDetectorMessenger::SetNewValue(G4UIcommand* cmd, G4String v) {
     cfg.includePbGlass = fPbGlass->GetNewBoolValue(v);
   } else if (cmd == fCounters) {
     cfg.includeCounters = fCounters->GetNewBoolValue(v);
+  } else if (cmd == fCheckOverlaps) {
+    cfg.checkOverlaps = fCheckOverlaps->GetNewBoolValue(v);
   } else if (cmd == fUpdate) {
     fDet->RebuildGeometry();
   } else if (cmd == fYieldScale) {

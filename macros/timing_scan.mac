@@ -7,6 +7,10 @@
 # scan completes in minutes; the timing analysis corrects the stochastic term
 # back to the physical light yield (see analysis/analyze.C and the README).
 /run/numberOfThreads 4
+/run/verbose 0
+/control/verbose 0
+/process/em/verbose 0
+/process/had/verbose 0
 
 /radical/geo/preset current
 /radical/geo/beamline true

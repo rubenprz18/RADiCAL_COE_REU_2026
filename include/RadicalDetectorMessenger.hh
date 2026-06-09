@@ -46,6 +46,7 @@ class RadicalDetectorMessenger : public G4UImessenger {
   G4UIcmdWithABool*          fMCP = nullptr;
   G4UIcmdWithABool*          fPbGlass = nullptr;
   G4UIcmdWithABool*          fCounters = nullptr;
+  G4UIcmdWithABool*          fCheckOverlaps = nullptr;
   G4UIcmdWithoutParameter*   fUpdate = nullptr;
 
   G4UIcmdWithADouble*        fYieldScale = nullptr;

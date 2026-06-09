@@ -16,6 +16,7 @@
 #include "globals.hh"
 #include "G4SystemOfUnits.hh"
 #include <vector>
+#include <algorithm>
 
 // ---------------------------------------------------------------------------
 // Enumerations for the switchable geometry options
@@ -104,6 +105,9 @@ class RadicalGeometryConfig {
   G4bool includePbGlass    = true;   // 2x2 lead-glass backing calorimeter
   G4bool includeBeamChamber= true;   // upstream (x,y) beam chamber
 
+  // Print a per-volume overlap check at construction (noisy; off by default).
+  G4bool checkOverlaps = false;
+
   // longitudinal placement of beam-line elements (z along beam, world frame)
   G4double counterA1_z   = -300.0 * CLHEP::mm;
   G4double counterA2_z   = -200.0 * CLHEP::mm;
@@ -125,6 +129,14 @@ class RadicalGeometryConfig {
   // Half-extent of the wrapped crystal cross section (square/rect bounding box).
   G4double WrapHalfX() const { return 0.5 * tileSizeX + tyvekThickness; }
   G4double WrapHalfY() const { return 0.5 * tileSizeY + tyvekThickness; }
+
+  // Half-length (along the beam) of the module envelope. It is sized to hold
+  // the full-length capillaries + SiPM/readout, so it is LONGER than the
+  // sampling stack; beam-line neighbours must clear this, not the stack.
+  G4double ModuleHalfZ() const {
+    return 0.5 * std::max(StackLength(), capillaryLength) +
+           sipmThickness + sipmWindow + readoutCardThk + 2. * CLHEP::mm;
+  }
 
   // Transverse pitch used when arranging modules in an array.
   G4double ModulePitchX() const { return tileSizeX + 2. * tyvekThickness + moduleGap; }

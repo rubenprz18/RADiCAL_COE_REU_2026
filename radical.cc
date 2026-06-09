@@ -40,8 +40,8 @@ int main(int argc, char** argv) {
   // --- user actions ---
   runManager->SetUserInitialization(new RadicalActionInitialization());
 
-  // --- visualization ---
-  auto* visManager = new G4VisExecutive();
+  // --- visualization ("quiet" suppresses the long driver-registration dump) ---
+  auto* visManager = new G4VisExecutive("quiet");
   visManager->Initialize();
 
   auto* uiManager = G4UImanager::GetUIpointer();

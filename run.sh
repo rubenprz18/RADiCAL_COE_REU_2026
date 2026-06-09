@@ -7,6 +7,7 @@
 #   ./run.sh run [E] [N]       run N electrons at E GeV  (default 150 GeV, 60 events)
 #   ./run.sh scan              full 25-150 GeV energy scan (for the timing fit)
 #   ./run.sh analyze [DIR]     make Fig.7 + timing-fit plots from a scan
+#   ./run.sh plot [FILE]       make starter graphs from one data file
 #   ./run.sh build             (re)compile the simulation
 #   ./run.sh help              show this help
 #
@@ -48,6 +49,10 @@ case "$cmd" in
     OUT="$HERE/results/run_${E}GeV"; rm -rf "$OUT"; mkdir -p "$OUT"
     cat > "$OUT/run.mac" <<EOF
 /run/numberOfThreads 4
+/run/verbose 0
+/control/verbose 0
+/process/em/verbose 0
+/process/had/verbose 0
 /radical/geo/preset current
 /radical/geo/beamline true
 /radical/optical/yieldScale 0.0003
@@ -62,9 +67,13 @@ case "$cmd" in
 /run/beamOn $N
 EOF
     echo ">> running $N electrons at $E GeV (full optical) ..."
-    ( cd "$OUT" && "$EXE" run.mac )
+    echo "   This takes a few minutes; progress prints every 10 events."
+    echo "   (full log: $OUT/run.log   |   press Ctrl+C to stop)"
+    echo ""
+    ( cd "$OUT" && "$EXE" run.mac 2>&1 | tee run.log )
+    echo ""
     echo ">> done. Data: $OUT/radical_run0.root"
-    echo "   Inspect with:  root -l $OUT/radical_run0.root   then  event->Scan(...)" ;;
+    echo "   Make graphs with:  ./run.sh plot $OUT/radical_run0.root" ;;
 
   scan)
     ensure_built
@@ -81,6 +90,18 @@ EOF
     ( cd "$HERE/analysis/figures" && root -l -b -q "$HERE/analysis/analyze.C(\"$DIR\")" )
     echo ">> plots written to $HERE/analysis/figures/" ;;
 
+  plot)
+    FILE="${2:-$HERE/results/run_150GeV/radical_run0.root}"
+    [ -f "$FILE" ] || FILE="$BUILD/run150/radical_run0.root"
+    [ -f "$FILE" ] || FILE="$BUILD/scan_out/radical_run5.root"
+    if [ ! -f "$FILE" ]; then
+      echo "No data file found. Make some first, e.g.:  ./run.sh run 150"; exit 1
+    fi
+    mkdir -p "$HERE/analysis/figures"
+    echo ">> plotting $FILE ..."
+    ( cd "$HERE/analysis/figures" && root -l -b -q "$HERE/analysis/myplots.C(\"$FILE\")" )
+    echo ">> wrote $HERE/analysis/figures/myplots.png" ;;
+
   help|*)
-    sed -n '3,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' ;;
+    sed -n '3,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' ;;
 esac

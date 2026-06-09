@@ -92,9 +92,7 @@ G4LogicalVolume* RadicalDetectorConstruction::BuildModuleLogical() {
                     : 0.5 * cfg.tileSizeY;
   bX += cfg.tyvekThickness;
   bY += cfg.tyvekThickness;
-  const G4double endSpace = cfg.sipmThickness + cfg.sipmWindow + cfg.readoutCardThk;
-  const G4double envHalfZ =
-      0.5 * std::max(cfg.StackLength(), cfg.capillaryLength) + endSpace + 2. * mm;
+  const G4double envHalfZ = cfg.ModuleHalfZ();
 
   auto* envSolid = new G4Box("Module_env", bX + 1. * mm, bY + 1. * mm, envHalfZ);
   auto* envLV = new G4LogicalVolume(envSolid, M->World(), "Module");
@@ -114,7 +112,7 @@ G4LogicalVolume* RadicalDetectorConstruction::BuildModuleLogical() {
 
   G4VSolid* lysoSolid = MakeTileSolid("LYSO", lysoHalf);
   fLysoLV = new G4LogicalVolume(lysoSolid, M->LYSO(), "LYSO");
-  new G4PVPlacement(nullptr, {}, fLysoLV, "LYSO_pv", tyvekLV, false, 0, true);
+  new G4PVPlacement(nullptr, {}, fLysoLV, "LYSO_pv", tyvekLV, false, 0, fConfig.checkOverlaps);
   fScintLV.push_back(fLysoLV);
 
   // Tungsten absorber.
@@ -126,11 +124,11 @@ G4LogicalVolume* RadicalDetectorConstruction::BuildModuleLogical() {
   G4double z = -0.5 * cfg.StackLength();
   for (G4int i = 0; i < cfg.nLysoPlates; ++i) {
     new G4PVPlacement(nullptr, G4ThreeVector(0, 0, z + wrapHalf), tyvekLV,
-                      "Wrap_pv", envLV, false, i, true);
+                      "Wrap_pv", envLV, false, i, fConfig.checkOverlaps);
     z += 2. * wrapHalf;
     if (i < cfg.nWPlates) {
       new G4PVPlacement(nullptr, G4ThreeVector(0, 0, z + 0.5 * cfg.wThickness),
-                        wLV, "W_pv", envLV, false, i, true);
+                        wLV, "W_pv", envLV, false, i, fConfig.checkOverlaps);
       z += cfg.wThickness;
     }
   }
@@ -143,7 +141,7 @@ G4LogicalVolume* RadicalDetectorConstruction::BuildModuleLogical() {
                                0.5 * cfg.capillaryLength, 0., twopi);
     auto* capLV = new G4LogicalVolume(capTube, M->Quartz(), "Capillary");
     new G4PVPlacement(nullptr, G4ThreeVector(c.x, c.y, 0.), capLV, "Cap_pv",
-                      envLV, false, capIdx, true);
+                      envLV, false, capIdx, fConfig.checkOverlaps);
 
     if (c.type != CapType::Calibration) {
       G4double filLen = (c.type == CapType::EType) ? cfg.capillaryLength
@@ -154,7 +152,7 @@ G4LogicalVolume* RadicalDetectorConstruction::BuildModuleLogical() {
                                   0.5 * filLen, 0., twopi);
       auto* filLV = new G4LogicalVolume(filSolid, filMat, "WLSFilament");
       new G4PVPlacement(nullptr, G4ThreeVector(0, 0, filZ), filLV, "Fil_pv",
-                        capLV, false, capIdx, true);
+                        capLV, false, capIdx, fConfig.checkOverlaps);
     }
     ++capIdx;
   }
@@ -173,10 +171,10 @@ G4LogicalVolume* RadicalDetectorConstruction::BuildModuleLogical() {
     if (c.type != CapType::Calibration) {
       // downstream channel = capIdx, upstream channel = capIdx + 50
       new G4PVPlacement(nullptr, G4ThreeVector(c.x, c.y, +zDown), fSipmLV,
-                        "SiPM_pv", envLV, false, capIdx, true);
+                        "SiPM_pv", envLV, false, capIdx, fConfig.checkOverlaps);
       if (cfg.sipmBothEnds)
         new G4PVPlacement(nullptr, G4ThreeVector(c.x, c.y, -zDown), fSipmLV,
-                          "SiPM_pv", envLV, false, capIdx + 50, true);
+                          "SiPM_pv", envLV, false, capIdx + 50, fConfig.checkOverlaps);
     }
     ++capIdx;
   }
@@ -209,53 +207,59 @@ void RadicalDetectorConstruction::BuildBeamline(G4LogicalVolume* worldLV) {
     struct C { G4double size; G4double z; G4int id; };
     std::vector<C> counters = {{10. * mm, cfg.counterA1_z, 0},
                                {20. * mm, cfg.counterA2_z, 1}};
-    auto* readLV = BuildPhotodetector("CounterReadout", 0.5 * 20. * mm,
-                                      2. * mm, 0.3 * mm, false);
+    // small photocathode patch that sits just OUTSIDE the +x face of a counter
+    auto* readLV = BuildPhotodetector("CounterReadout", 0.5 * mm, 4. * mm,
+                                      2.5 * mm, false);
     fCounterReadLV = readLV;
     for (auto& c : counters) {
       auto* sc = new G4Box("Counter", 0.5 * c.size, 0.5 * c.size, 2.5 * mm);
       auto* scLV = new G4LogicalVolume(sc, M->PlasticScint(), "Counter");
       new G4PVPlacement(nullptr, G4ThreeVector(0, 0, c.z), scLV, "Counter_pv",
-                        worldLV, false, c.id, true);
+                        worldLV, false, c.id, fConfig.checkOverlaps);
       fCounterLV.push_back(scLV);
-      // scintillation readout patch on the +x edge
-      new G4PVPlacement(nullptr, G4ThreeVector(0.5 * c.size + 0.3 * mm, 0, c.z),
-                        readLV, "CntRead_pv", worldLV, false, c.id, true);
+      // readout patch touching (not overlapping) the +x edge
+      new G4PVPlacement(nullptr, G4ThreeVector(0.5 * c.size + 0.5 * mm, 0, c.z),
+                        readLV, "CntRead_pv", worldLV, false, c.id, fConfig.checkOverlaps);
     }
   }
 
+  // MCP geometry + its placement upstream of the module envelope.
+  const G4double tubeHalfZ = 25. * mm;
+  const G4double mcpZ = cfg.module_z - (cfg.ModuleHalfZ() + 5. * mm + tubeHalfZ);
+
   // --- upstream beam position chamber (passive thin gas) ------------------
   if (cfg.includeBeamChamber) {
+    const G4double chamberZ = mcpZ - tubeHalfZ - 15. * mm;  // upstream of MCP
     auto* ch = new G4Box("BeamChamber", 30. * mm, 30. * mm, 5. * mm);
     auto* chLV = new G4LogicalVolume(ch, M->Vacuum(), "BeamChamber");
-    new G4PVPlacement(nullptr, G4ThreeVector(0, 0, cfg.beamChamber_z), chLV,
-                      "BeamChamber_pv", worldLV, false, 0, true);
+    new G4PVPlacement(nullptr, G4ThreeVector(0, 0, chamberZ), chLV,
+                      "BeamChamber_pv", worldLV, false, 0, fConfig.checkOverlaps);
   }
 
   // --- MCP timing reference (Hamamatsu R3809U-50) ------------------------
   if (cfg.includeMCP) {
-    const G4double tubeR = 12.5 * mm, tubeHalfZ = 25. * mm;
+    const G4double tubeR = 12.5 * mm;
     auto* tube = new G4Tubs("MCPtube", 0., tubeR, tubeHalfZ, 0., twopi);
     auto* tubeLV = new G4LogicalVolume(tube, M->Vacuum(), "MCPtube");
-    new G4PVPlacement(nullptr, G4ThreeVector(0, 0, cfg.mcp_z), tubeLV,
-                      "MCPtube_pv", worldLV, false, 0, true);
+    new G4PVPlacement(nullptr, G4ThreeVector(0, 0, mcpZ), tubeLV,
+                      "MCPtube_pv", worldLV, false, 0, fConfig.checkOverlaps);
     // quartz entrance window (Cerenkov radiator for the crossing beam)
     auto* win = new G4Tubs("MCPwindow", 0., 11. * mm, 1.25 * mm, 0., twopi);
     auto* winLV = new G4LogicalVolume(win, M->Quartz(), "MCPwindow");
     new G4PVPlacement(nullptr, G4ThreeVector(0, 0, -tubeHalfZ + 1.25 * mm),
-                      winLV, "MCPwindow_pv", tubeLV, false, 0, true);
+                      winLV, "MCPwindow_pv", tubeLV, false, 0, fConfig.checkOverlaps);
     // bialkali photocathode just behind the window
-    fMcpCathodeLV = BuildPhotodetector("MCPcathode", 11. * mm, 0., 0.05 * mm, true);
+    fMcpCathodeLV =
+        BuildPhotodetector("MCPcathode", 11. * mm, 0., 0.05 * mm, /*round*/ true);
     new G4PVPlacement(nullptr, G4ThreeVector(0, 0, -tubeHalfZ + 2.6 * mm),
-                      fMcpCathodeLV, "MCPcathode_pv", tubeLV, false, 0, true);
+                      fMcpCathodeLV, "MCPcathode_pv", tubeLV, false, 0, fConfig.checkOverlaps);
   }
 
   // --- Pb-glass backing calorimeter: 2x2 array, 4x4x40 cm total ----------
   if (cfg.includePbGlass) {
     const G4double blk = 20. * mm;        // 2x2 cm cross section per block
     const G4double blkHalfZ = 200. * mm;  // 40 cm deep
-    const G4double frontZ = cfg.module_z + 0.5 * fConfig.StackLength() +
-                            cfg.pbGlassGap;
+    const G4double frontZ = cfg.module_z + cfg.ModuleHalfZ() + cfg.pbGlassGap;
     const G4double centerZ = frontZ + blkHalfZ;
     auto* glass = new G4Box("PbGlass", 0.5 * blk, 0.5 * blk, blkHalfZ);
     auto* glassLV = new G4LogicalVolume(glass, M->LeadGlass(), "PbGlass");
@@ -267,10 +271,10 @@ void RadicalDetectorConstruction::BuildBeamline(G4LogicalVolume* worldLV) {
       for (int ix = 0; ix < 2; ++ix) {
         G4double x = (ix - 0.5) * blk, y = (iy - 0.5) * blk;
         new G4PVPlacement(nullptr, G4ThreeVector(x, y, centerZ), glassLV,
-                          "PbGlass_pv", worldLV, false, id, true);
+                          "PbGlass_pv", worldLV, false, id, fConfig.checkOverlaps);
         new G4PVPlacement(nullptr,
                           G4ThreeVector(x, y, centerZ + blkHalfZ + 0.3 * mm),
-                          readLV, "PbRead_pv", worldLV, false, id, true);
+                          readLV, "PbRead_pv", worldLV, false, id, fConfig.checkOverlaps);
         ++id;
       }
     fPbGlassLV = glassLV;  // energy SD attached in ConstructSDandField
@@ -286,7 +290,7 @@ G4VPhysicalVolume* RadicalDetectorConstruction::Construct() {
   // --- world --------------------------------------------------------------
   auto* worldSolid = new G4Box("World", 0.75 * m, 0.75 * m, 1.5 * m);
   auto* worldLV = new G4LogicalVolume(worldSolid, M->World(), "World");
-  fWorldPV = new G4PVPlacement(nullptr, {}, worldLV, "World", nullptr, false, 0, true);
+  fWorldPV = new G4PVPlacement(nullptr, {}, worldLV, "World", nullptr, false, 0, fConfig.checkOverlaps);
 
   // --- module(s) ----------------------------------------------------------
   G4LogicalVolume* moduleLV = BuildModuleLogical();
@@ -303,7 +307,7 @@ G4VPhysicalVolume* RadicalDetectorConstruction::Construct() {
         if (iy % 2) x += 0.5 * pitchX;
       }
       new G4PVPlacement(nullptr, G4ThreeVector(x, y, cfg.module_z), moduleLV,
-                        "Module_pv", worldLV, false, modId++, true);
+                        "Module_pv", worldLV, false, modId++, fConfig.checkOverlaps);
     }
   }
 
