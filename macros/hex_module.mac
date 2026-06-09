@@ -1,0 +1,21 @@
+# hex_module.mac -- hexagonal tile cross-section, hex-packed 7-module cluster
+# Demonstrates the alternative tile shape and array tiling (Fig. 28 discussion).
+/run/numberOfThreads 4
+
+/radical/geo/preset enhanced
+/radical/geo/tileShape hexagon
+/radical/geo/hexR 10 mm
+/radical/geo/layout grid9
+/radical/geo/arrayNx 3
+/radical/geo/arrayNy 3
+/radical/geo/arrayTiling hex
+/radical/geo/beamline true
+
+/radical/optical/yieldScale 0.005
+/radical/optical/maxPhotons 500000
+/run/initialize
+
+/radical/beam/particle e-
+/radical/beam/energyGeV 100
+/run/printProgress 5
+/run/beamOn 50

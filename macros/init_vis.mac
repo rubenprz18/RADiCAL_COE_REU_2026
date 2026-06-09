@@ -1,0 +1,22 @@
+# init_vis.mac -- default interactive initialization (loaded automatically by
+# ./radical when started with no arguments).
+#
+# Builds the current 14x14 mm prototype + full beam line, opens the viewer, and
+# sets a light beam ready to shoot.  Optical yield is reduced so an interactive
+# /run/beamOn stays fast and the picture stays readable.
+/run/numberOfThreads 1
+
+/radical/geo/preset current
+/radical/geo/beamline true
+/radical/optical/yieldScale 0.0005
+/radical/optical/maxPhotons 50000
+/run/initialize
+
+# open + configure the viewer
+/control/execute macros/vis.mac
+
+# a ready-to-fire beam (then type  /run/beamOn 1  in the session)
+/radical/beam/particle e-
+/radical/beam/energyGeV 20
+/radical/beam/sigmaX 2 mm
+/radical/beam/sigmaY 2 mm

@@ -1,0 +1,22 @@
+# single_module.mac -- current 14x14 mm prototype, full beam line (Fig. 11c)
+# Batch run.  Full optical tracking with a reduced scintillation yield so the
+# photon count stays tractable; scale detected p.e. back by 1/yieldScale.
+/run/numberOfThreads 4
+
+/radical/geo/preset current
+/radical/geo/tileShape square
+/radical/geo/layout quincunx5
+/radical/geo/beamline true
+
+/radical/optical/yieldScale 0.01
+/radical/optical/maxPhotons 500000
+/run/initialize
+
+/radical/beam/particle e-
+/radical/beam/energyGeV 50
+/radical/beam/sigmaEfrac 0.01
+/radical/beam/sigmaX 2 mm
+/radical/beam/sigmaY 2 mm
+
+/run/printProgress 10
+/run/beamOn 100

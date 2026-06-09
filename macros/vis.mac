@@ -1,0 +1,38 @@
+# vis.mac -- visualization setup (called by init_vis.mac)
+#
+# Opens the Qt OpenGL viewer and configures a clean view of the detector.
+/vis/open OGL 1000x800-0+0
+/vis/viewer/set/autoRefresh false
+/vis/verbose errors
+
+# draw the full geometry
+/vis/drawVolume
+/vis/viewer/set/viewpointThetaPhi 70. 20.
+/vis/viewer/set/lightsThetaPhi 70. 20.
+/vis/viewer/set/style surface
+/vis/viewer/set/auxiliaryEdge true
+/vis/viewer/set/background 0.10 0.10 0.16
+/vis/viewer/zoom 1.4
+
+# trajectories, colour-coded by charge, accumulated over a run
+/vis/scene/add/trajectories smooth
+/vis/modeling/trajectories/create/drawByCharge
+/vis/modeling/trajectories/drawByCharge-0/set 1 red      # e+ / positive
+/vis/modeling/trajectories/drawByCharge-0/set -1 blue    # e- / negative
+/vis/modeling/trajectories/drawByCharge-0/set 0 green    # gamma / optical
+
+# By default hide optical photons so the EM shower is clear. To SEE the
+# scintillation/WLS light instead, run:  /vis/filtering/trajectories/photons/active false
+/vis/filtering/trajectories/create/particleFilter photons
+/vis/filtering/trajectories/photons/add opticalphoton
+/vis/filtering/trajectories/photons/invert true
+
+/vis/scene/endOfEventAction accumulate
+/vis/scene/add/hits
+/vis/scene/add/axes 0 0 0 20 mm
+/vis/scene/add/scale 50 mm z 1 0 0 manual 0 -20 0 mm
+/vis/scene/add/text 0 0 -90 mm 8 0 0 MCP
+/vis/scene/add/text 0 0 0 mm 8 0 0 RADiCAL
+/vis/scene/add/text 0 0 270 mm 8 0 0 PbGlass
+/vis/viewer/set/autoRefresh true
+/vis/viewer/flush

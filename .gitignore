@@ -1,0 +1,15 @@
+# build artifacts
+/build/
+*.o
+*.so
+*.dylib
+
+# simulation output
+*.root
+
+# editor / OS
+.DS_Store
+*.swp
+
+# run.sh experiment output
+results/

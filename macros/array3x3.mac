@@ -1,0 +1,22 @@
+# array3x3.mac -- 3x3 array of enhanced modules (Section 7), square tiling
+/run/numberOfThreads 4
+
+/radical/geo/preset enhanced
+/radical/geo/layout grid9
+/radical/geo/tileShape square
+/radical/geo/arrayNx 3
+/radical/geo/arrayNy 3
+/radical/geo/arrayTiling square
+/radical/geo/beamline true
+
+/radical/optical/yieldScale 0.005
+/radical/optical/maxPhotons 500000
+/run/initialize
+
+/radical/beam/particle e-
+/radical/beam/energyGeV 100
+# aim at the central module (0,0); shift to hit neighbours if desired
+/radical/beam/meanX 0 mm
+/radical/beam/meanY 0 mm
+/run/printProgress 5
+/run/beamOn 50

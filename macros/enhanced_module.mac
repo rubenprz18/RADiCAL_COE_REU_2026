@@ -1,0 +1,16 @@
+# enhanced_module.mac -- enhanced 18x18 mm module, 9 capillaries (Fig. 28)
+/run/numberOfThreads 4
+
+/radical/geo/preset enhanced
+/radical/geo/tileShape square
+/radical/geo/layout grid9
+/radical/geo/beamline true
+
+/radical/optical/yieldScale 0.01
+/radical/optical/maxPhotons 500000
+/run/initialize
+
+/radical/beam/particle e-
+/radical/beam/energyGeV 100
+/run/printProgress 10
+/run/beamOn 100

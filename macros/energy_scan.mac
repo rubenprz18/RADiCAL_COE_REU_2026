@@ -1,0 +1,28 @@
+# energy_scan.mac -- the paper's beam-energy scan: 25..150 GeV in 25 GeV steps
+# Each /run/beamOn writes a separate ROOT file radical_runN.root.
+/run/numberOfThreads 4
+
+/radical/geo/preset current
+/radical/geo/beamline true
+/radical/optical/yieldScale 0.01
+/radical/optical/maxPhotons 500000
+/run/initialize
+
+/radical/beam/particle e-
+/radical/beam/sigmaEfrac 0.005
+/radical/beam/sigmaX 2 mm
+/radical/beam/sigmaY 2 mm
+/run/printProgress 20
+
+/radical/beam/energyGeV 25
+/run/beamOn 200
+/radical/beam/energyGeV 50
+/run/beamOn 200
+/radical/beam/energyGeV 75
+/run/beamOn 200
+/radical/beam/energyGeV 100
+/run/beamOn 200
+/radical/beam/energyGeV 125
+/run/beamOn 200
+/radical/beam/energyGeV 150
+/run/beamOn 200

@@ -1,0 +1,37 @@
+# timing_scan.mac
+# Energy scan 25..150 GeV for (a) the Fig. 7 longitudinal shower profile and
+# (b) the timing-resolution fit sigma_t = a/sqrt(E) (+) b.
+# Each /run/beamOn writes radical_run<N>.root (N = 0..5).
+#
+# Full optical tracking with a reduced scintillation yield + photon cap so the
+# scan completes in minutes; the timing analysis corrects the stochastic term
+# back to the physical light yield (see analysis/analyze.C and the README).
+/run/numberOfThreads 4
+
+/radical/geo/preset current
+/radical/geo/beamline true
+# Use a low yield-scale (NO per-event cap) so the detected p.e. scale with beam
+# energy -- this preserves the stochastic 1/sqrt(E) timing term. The step-count
+# loop-breaker in the stepping action bounds runtime instead of a photon cap.
+/radical/optical/yieldScale 0.0003
+/radical/optical/maxPhotons 0
+/run/initialize
+
+/radical/beam/particle e-
+/radical/beam/sigmaEfrac 0.005
+/radical/beam/sigmaX 2 mm
+/radical/beam/sigmaY 2 mm
+/run/printProgress 20
+
+/radical/beam/energyGeV 25
+/run/beamOn 50
+/radical/beam/energyGeV 50
+/run/beamOn 50
+/radical/beam/energyGeV 75
+/run/beamOn 50
+/radical/beam/energyGeV 100
+/run/beamOn 50
+/radical/beam/energyGeV 125
+/run/beamOn 50
+/radical/beam/energyGeV 150
+/run/beamOn 50
