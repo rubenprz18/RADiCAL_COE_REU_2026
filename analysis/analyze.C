@@ -41,7 +41,9 @@ struct RunResult {
   double sigMCPErr = 0;
 };
 
-// Robust Gaussian width (returned in ps) of a list of times (ns).
+// Robust timing width (returned in ps) of a list of times (ns): the trimmed
+// standard deviation about the median (within +/-4 MAD-sigma). This is stable
+// on small samples, where a Gaussian fit can diverge.
 static void FitGauss(std::vector<double> v, double& sig, double& sigErr,
                      TCanvas* c, int pad, const char* title) {
   sig = sigErr = 0;
@@ -51,23 +53,29 @@ static void FitGauss(std::vector<double> v, double& sig, double& sigErr,
   std::vector<double> ad;
   for (double x : v) ad.push_back(std::fabs(x - med));
   std::sort(ad.begin(), ad.end());
-  double rsig = std::max(1.4826 * ad[ad.size() / 2], 0.01);
+  double rsig = std::max(1.4826 * ad[ad.size() / 2], 0.005);
+
+  // trimmed mean & standard deviation of the Gaussian CORE (+/-2.5 MAD-sigma),
+  // matching the paper's practice of fitting the peak (non-Gaussian low-energy
+  // late tails, from channels with few p.e., are excluded).
+  double s = 0, s2 = 0; int n = 0;
   std::vector<double> core;
-  for (double x : v) if (std::fabs(x - med) < 4 * rsig) core.push_back(x);
-  if (core.size() < 8) core = v;
-  double win = std::max(4 * rsig, 0.08);
-  static int uid = 0; ++uid;
-  auto* h = new TH1D(Form("hg_%d", uid), title, 50, med - win, med + win);
-  for (double x : core) h->Fill(x);
-  h->Fit("gaus", "Q");
-  TF1* g = h->GetFunction("gaus");
-  for (int it = 0; it < 3 && g; ++it) {
-    double m = g->GetParameter(1), s = g->GetParameter(2);
-    h->Fit("gaus", "Q", "", m - 2 * s, m + 2 * s);
-    g = h->GetFunction("gaus");
+  for (double x : v)
+    if (std::fabs(x - med) < 2.5 * rsig) { s += x; s2 += x * x; ++n; core.push_back(x); }
+  if (n < 5) { s = s2 = 0; n = 0; for (double x : v) { s += x; s2 += x * x; ++n; } core = v; }
+  double mean = s / n, var = s2 / n - mean * mean;
+  if (var < 0) var = 0;
+  sig = std::sqrt(var) * 1000.;          // ps
+  sigErr = sig / std::sqrt(2.0 * n);     // approximate error on a width
+
+  // draw the distribution for the dt-distributions canvas
+  if (c && pad > 0) {
+    double win = std::max(4 * rsig, 0.05);
+    static int uid = 0; ++uid;
+    auto* h = new TH1D(Form("hg_%d", uid), title, 50, med - win, med + win);
+    for (double x : core) h->Fill(x);
+    c->cd(pad); h->Draw();
   }
-  if (g) { sig = g->GetParameter(2) * 1000.; sigErr = g->GetParError(2) * 1000.; }
-  if (c && pad > 0) { c->cd(pad); h->Draw(); }
 }
 
 // ---- locate the available run files -------------------------------------

@@ -12,8 +12,13 @@
 #include "G4PrimaryVertex.hh"
 #include "G4PrimaryParticle.hh"
 #include "G4SystemOfUnits.hh"
+#include "Randomize.hh"
 #include <algorithm>
 #include <limits>
+
+// Realistic readout resolutions (defaults: realistic MCP reference, ideal SiPM).
+G4double RadicalEventAction::fMCPres = 0.018 * CLHEP::ns;  // ~18 ps reference
+G4double RadicalEventAction::fSiPMjit = 0.0;               // per-channel jitter
 
 void RadicalEventAction::BeginOfEventAction(const G4Event*) {
   fSiPM.clear();
@@ -122,7 +127,9 @@ void RadicalEventAction::EndOfEventAction(const G4Event* evt) {
     const G4int module = (G4int)(kv.first / 1000);
     const G4int channel = (G4int)(kv.first % 1000);
     const G4int npe = (G4int)kv.second.size();
-    const G4double tHit = ThresholdTime(kv.second, kSiPMThreshold) / ns;
+    G4double tHitNs = ThresholdTime(kv.second, kSiPMThreshold);
+    if (tHitNs < 1.e8) tHitNs += G4RandGauss::shoot(0., fSiPMjit);  // electronics
+    const G4double tHit = tHitNs / ns;
     npeSiPM += npe;
     ana->FillNtupleIColumn(radana::kChannel, 0, eid);
     ana->FillNtupleIColumn(radana::kChannel, 1, module);
@@ -142,7 +149,9 @@ void RadicalEventAction::EndOfEventAction(const G4Event* evt) {
 
   // ---- timing ------------------------------------------------------------
   const G4int npeMCP = (G4int)fMCP.size();
-  const G4double tMCP = ThresholdTime(fMCP, kMCPThreshold) / ns;  // ns
+  G4double tMCPns = ThresholdTime(fMCP, kMCPThreshold);
+  if (tMCPns < 1.e8) tMCPns += G4RandGauss::shoot(0., fMCPres);  // reference res.
+  const G4double tMCP = tMCPns / ns;  // ns
   if (npeMCP >= kMCPThreshold && (nDown || nUp)) {
     G4double tModule = 0.;
     if (nDown && nUp) tModule = 0.5 * (tDown + tUp);

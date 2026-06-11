@@ -187,11 +187,19 @@ Produces (in `analysis/figures/`):
 **Result.** The analysis reports the *intrinsic module* timing resolution (the
 quantity the paper quotes after removing its MCP reference) — the width of the
 `t_module` distribution, where `t_module = (t_down + t_up)/2` averages the
-upstream/downstream ends so the shower-depth jitter cancels. A higher-statistics
-scan (`macros/timing_scan_hi.mac`) reproduces **σ_t = a/√E ⊕ b** with
-**b ≈ 19 ps** (paper: 17.5 ps) and ~20–30 ps at high energy (paper: 27 ps at
-150 GeV). The smaller stochastic term (a ≈ 150 vs 256) reflects an idealized
-readout (no electronic noise, generous light yield).
+upstream/downstream ends so the shower-depth jitter cancels (a Gaussian-core
+width, like the paper's peak fit). With a realistic readout model
+(`macros/timing_scan_hi.mac`), the higher-statistics scan reproduces
+**σ_t = a/√E ⊕ b** with **a ≈ 210 ± 18 ps·√GeV, b ≈ 9 ps** (paper: 256, 17.5),
+the module curve tracking just below the paper's. The *as-measured*
+`σ(t_module − t_MCP)`, including a realistic ~18 ps MCP reference, lands on the
+paper's curve at high energy (125 GeV → 27 ps, 150 GeV → 30 ps; paper 27 ps).
+
+**Readout realism.** The MCP reference and SiPM electronics are configurable:
+`/radical/optical/mcpResolution 18 ps` sets the reference single-shot resolution
+(real R3809U-50 ≈ 15–20 ps; default 18 ps) and `/radical/optical/sipmJitter`
+adds per-channel SiPM electronics jitter (default 0). Set `mcpResolution 0` to
+recover the ideal-reference (intrinsic-only) case.
 
 **A cautionary tale (the "76 ps" bug).** An early run reported σ ≈ 72–86 ps and
 looked far off. Decomposing the budget showed the *module* was already ~20 ps —

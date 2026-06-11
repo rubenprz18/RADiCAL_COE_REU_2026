@@ -51,6 +51,8 @@ class RadicalDetectorMessenger : public G4UImessenger {
 
   G4UIcmdWithADouble*        fYieldScale = nullptr;
   G4UIcmdWithAnInteger*      fMaxPhotons = nullptr;
+  G4UIcmdWithADoubleAndUnit* fMcpRes = nullptr;
+  G4UIcmdWithADoubleAndUnit* fSipmJit = nullptr;
 };
 
 #endif  // RADICAL_DETECTOR_MESSENGER_HH

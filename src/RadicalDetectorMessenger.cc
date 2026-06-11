@@ -5,6 +5,7 @@
 #include "RadicalDetectorConstruction.hh"
 #include "RadicalMaterials.hh"
 #include "RadicalStackingAction.hh"
+#include "RadicalEventAction.hh"
 
 #include "G4UIdirectory.hh"
 #include "G4UIcmdWithAString.hh"
@@ -82,6 +83,16 @@ RadicalDetectorMessenger::RadicalDetectorMessenger(
   fMaxPhotons = new G4UIcmdWithAnInteger("/radical/optical/maxPhotons", this);
   fMaxPhotons->SetGuidance("Per-event optical photon cap (0 = no cap)");
   fMaxPhotons->SetParameterName("n", false);
+
+  fMcpRes = new G4UIcmdWithADoubleAndUnit("/radical/optical/mcpResolution", this);
+  fMcpRes->SetGuidance("MCP reference single-shot time resolution (e.g. 18 ps)");
+  fMcpRes->SetParameterName("t", false);
+  fMcpRes->SetUnitCategory("Time");
+
+  fSipmJit = new G4UIcmdWithADoubleAndUnit("/radical/optical/sipmJitter", this);
+  fSipmJit->SetGuidance("Per-SiPM-channel electronics time jitter");
+  fSipmJit->SetParameterName("t", false);
+  fSipmJit->SetUnitCategory("Time");
 }
 
 RadicalDetectorMessenger::~RadicalDetectorMessenger() {
@@ -89,7 +100,7 @@ RadicalDetectorMessenger::~RadicalDetectorMessenger() {
   delete fNx; delete fNy; delete fSizeX; delete fSizeY; delete fHexR;
   delete fTyvek; delete fBeamline; delete fMCP; delete fPbGlass;
   delete fCounters; delete fCheckOverlaps; delete fUpdate;
-  delete fYieldScale; delete fMaxPhotons;
+  delete fYieldScale; delete fMaxPhotons; delete fMcpRes; delete fSipmJit;
   delete fGeoDir; delete fOptDir;
 }
 
@@ -137,5 +148,9 @@ void RadicalDetectorMessenger::SetNewValue(G4UIcommand* cmd, G4String v) {
     RadicalMaterials::SetYieldScale(fYieldScale->GetNewDoubleValue(v));
   } else if (cmd == fMaxPhotons) {
     RadicalStackingAction::SetMaxOpticalPhotons(fMaxPhotons->GetNewIntValue(v));
+  } else if (cmd == fMcpRes) {
+    RadicalEventAction::SetMCPResolution(fMcpRes->GetNewDoubleValue(v));
+  } else if (cmd == fSipmJit) {
+    RadicalEventAction::SetSiPMJitter(fSipmJit->GetNewDoubleValue(v));
   }
 }

@@ -32,7 +32,15 @@ class RadicalEventAction : public G4UserEventAction {
   static constexpr G4int kSiPMThreshold = 3;  // 3rd detected p.e.
   static constexpr G4int kMCPThreshold = 3;   // 3rd detected p.e. (robust leading edge)
 
+  // --- realistic readout resolution (set via /radical/optical/...) --------
+  // MCP single-shot reference resolution (real R3809U-50 ~ 15-20 ps), and
+  // per-SiPM-channel electronics jitter, both applied to the final hit time.
+  static void SetMCPResolution(G4double s) { fMCPres = s; }
+  static void SetSiPMJitter(G4double s) { fSiPMjit = s; }
+
  private:
+  static G4double fMCPres;   // MCP reference single-shot resolution
+  static G4double fSiPMjit;  // per-channel SiPM electronics jitter
   struct PD { G4int n = 0; G4double tFirst = 1.e9; };
   void Tally(std::map<G4long, PD>& m, G4long key, G4double t);
   // time of the k-th earliest photon (fixed-threshold leading edge)
