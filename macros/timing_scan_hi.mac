@@ -1,0 +1,35 @@
+# timing_scan_hi.mac
+# Higher-statistics 25..150 GeV scan with the improved MCP reference, for a
+# clean sigma_t = a/sqrt(E) (+) b fit. Graded event counts: more at the cheap
+# low energies (where the stochastic term matters), fewer at the expensive high
+# energies (where sigma is small and already stable).
+/run/numberOfThreads 4
+/run/verbose 0
+/control/verbose 0
+/process/em/verbose 0
+/process/had/verbose 0
+
+/radical/geo/preset current
+/radical/geo/beamline true
+/radical/optical/yieldScale 0.0003
+/radical/optical/maxPhotons 0
+/run/initialize
+
+/radical/beam/particle e-
+/radical/beam/sigmaEfrac 0.005
+/radical/beam/sigmaX 2 mm
+/radical/beam/sigmaY 2 mm
+/run/printProgress 50
+
+/radical/beam/energyGeV 25
+/run/beamOn 120
+/radical/beam/energyGeV 50
+/run/beamOn 100
+/radical/beam/energyGeV 75
+/run/beamOn 90
+/radical/beam/energyGeV 100
+/run/beamOn 80
+/radical/beam/energyGeV 125
+/run/beamOn 70
+/radical/beam/energyGeV 150
+/run/beamOn 70

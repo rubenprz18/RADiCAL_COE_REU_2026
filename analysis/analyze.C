@@ -34,10 +34,41 @@ static const double YIELD_SCALE = 0.002;
 static const int NLAYER = 29;
 
 struct RunResult {
-  double E;        // GeV
-  double sigma;    // ps
-  double sigmaErr; // ps
+  double E = 0;          // GeV
+  double sigMod = 0;     // intrinsic module resolution [ps] (reference removed)
+  double sigModErr = 0;
+  double sigMCP = 0;     // module - MCP, as a real test beam measures it [ps]
+  double sigMCPErr = 0;
 };
+
+// Robust Gaussian width (returned in ps) of a list of times (ns).
+static void FitGauss(std::vector<double> v, double& sig, double& sigErr,
+                     TCanvas* c, int pad, const char* title) {
+  sig = sigErr = 0;
+  if (v.size() < 8) return;
+  std::sort(v.begin(), v.end());
+  double med = v[v.size() / 2];
+  std::vector<double> ad;
+  for (double x : v) ad.push_back(std::fabs(x - med));
+  std::sort(ad.begin(), ad.end());
+  double rsig = std::max(1.4826 * ad[ad.size() / 2], 0.01);
+  std::vector<double> core;
+  for (double x : v) if (std::fabs(x - med) < 4 * rsig) core.push_back(x);
+  if (core.size() < 8) core = v;
+  double win = std::max(4 * rsig, 0.08);
+  static int uid = 0; ++uid;
+  auto* h = new TH1D(Form("hg_%d", uid), title, 50, med - win, med + win);
+  for (double x : core) h->Fill(x);
+  h->Fit("gaus", "Q");
+  TF1* g = h->GetFunction("gaus");
+  for (int it = 0; it < 3 && g; ++it) {
+    double m = g->GetParameter(1), s = g->GetParameter(2);
+    h->Fit("gaus", "Q", "", m - 2 * s, m + 2 * s);
+    g = h->GetFunction("gaus");
+  }
+  if (g) { sig = g->GetParameter(2) * 1000.; sigErr = g->GetParError(2) * 1000.; }
+  if (c && pad > 0) { c->cd(pad); h->Draw(); }
+}
 
 // ---- locate the available run files -------------------------------------
 static std::vector<TString> FindFiles(const TString& dir) {
@@ -121,8 +152,12 @@ static void Fig7(const std::vector<TString>& files) {
 // =========================================================================
 // (2) timing resolution sigma_t = a/sqrt(E) (+) b
 // =========================================================================
+// For each energy file, fit (a) the intrinsic module resolution = width of the
+// t_module distribution (its mean is just the constant time-of-flight, so the
+// width is the resolution with the reference removed -- this is the quantity the
+// paper quotes after subtracting the MCP), and (b) the as-measured module - MCP.
 static RunResult FitOneTiming(TFile* file, TCanvas* c, int pad) {
-  RunResult r{0, 0, 0};
+  RunResult r;
   TTree* ev = (TTree*)file->Get("event");
   if (!ev) return r;
 
@@ -132,61 +167,22 @@ static RunResult FitOneTiming(TFile* file, TCanvas* c, int pad) {
   ev->SetBranchAddress("tModuleUp", &tUp);
   ev->SetBranchAddress("tMCP", &tMCP);
 
-  // first pass: collect valid dt to set a sensible window.
-  // Undetected channels carry a 1e9 ns sentinel from the simulation, so require
-  // all three times to be physical (a few -- tens of ns).
-  const double TMAX = 500.;  // ns
-  std::vector<double> dts;
+  const double TMAX = 500.;  // ns; undetected channels carry a 1e9 sentinel
+  std::vector<double> vMod, vMCP;
   double sumE = 0.; Long64_t nev = ev->GetEntries();
   for (Long64_t i = 0; i < nev; ++i) {
     ev->GetEntry(i);
     sumE += beamE;
-    if (tDown > 0 && tDown < TMAX && tUp > 0 && tUp < TMAX &&
-        tMCP > 0 && tMCP < TMAX) {
+    if (tDown > 0 && tDown < TMAX && tUp > 0 && tUp < TMAX) {
       double tModule = 0.5 * (tDown + tUp);
-      dts.push_back(tModule - tMCP);   // ns
+      vMod.push_back(tModule);
+      if (tMCP > 0 && tMCP < TMAX) vMCP.push_back(tModule - tMCP);
     }
   }
   r.E = (nev ? sumE / nev : 0.) / 1000.;
-  if (dts.size() < 10) return r;
-
-  // Robust window: use the median and the MAD (median absolute deviation) so a
-  // few outlier events (poor module-time estimate, low p.e.) don't blow up the
-  // Gaussian fit. robust sigma = 1.4826 * MAD.
-  std::sort(dts.begin(), dts.end());
-  double median = dts[dts.size() / 2];
-  std::vector<double> ad;
-  ad.reserve(dts.size());
-  for (double d : dts) ad.push_back(std::fabs(d - median));
-  std::sort(ad.begin(), ad.end());
-  double mad = ad[ad.size() / 2];
-  double rsig = std::max(1.4826 * mad, 0.02);   // ns, floor 20 ps
-
-  // keep events within median +/- 4 robust-sigma
-  std::vector<double> core;
-  for (double d : dts)
-    if (std::fabs(d - median) < 4 * rsig) core.push_back(d);
-  if (core.size() < 8) core = dts;
-
-  double win = std::max(4 * rsig, 0.10);
-  auto* h = new TH1D(Form("hdt_%d", pad),
-                     Form("%.0f GeV;t_{module}-t_{MCP} [ns];events", r.E),
-                     50, median - win, median + win);
-  for (double d : core) h->Fill(d);
-
-  // iterative Gaussian fit within +/-2 sigma
-  h->Fit("gaus", "QR");
-  TF1* g = h->GetFunction("gaus");
-  for (int it = 0; it < 3 && g; ++it) {
-    double m = g->GetParameter(1), s = g->GetParameter(2);
-    h->Fit("gaus", "Q", "", m - 2 * s, m + 2 * s);
-    g = h->GetFunction("gaus");
-  }
-  if (g) {
-    r.sigma = g->GetParameter(2) * 1000.;     // ns -> ps
-    r.sigmaErr = g->GetParError(2) * 1000.;
-  }
-  if (c) { c->cd(pad); h->Draw(); }
+  FitGauss(vMod, r.sigMod, r.sigModErr, c, pad,
+           Form("%.0f GeV;t_{module} [ns];events", r.E));
+  FitGauss(vMCP, r.sigMCP, r.sigMCPErr, nullptr, 0, "");
   return r;
 }
 
@@ -194,7 +190,7 @@ static void Timing(const std::vector<TString>& files) {
   gStyle->SetOptStat(0);
   gStyle->SetOptFit(0);
 
-  auto* cdt = new TCanvas("c_dt", "dt distributions", 1200, 700);
+  auto* cdt = new TCanvas("c_dt", "module time distributions", 1200, 700);
   cdt->Divide(3, 2);
 
   std::vector<RunResult> res;
@@ -203,72 +199,70 @@ static void Timing(const std::vector<TString>& files) {
     TFile* file = TFile::Open(fn);
     if (!file || file->IsZombie()) continue;
     RunResult r = FitOneTiming(file, cdt, pad++);
-    if (r.sigma > 0) res.push_back(r);
-    // keep file open so histograms drawn on the canvas survive until SaveAs
+    if (r.sigMod > 0) res.push_back(r);
   }
   cdt->SaveAs("timing_dt_distributions.png");
 
   if (res.size() < 2) { printf("[Timing] too few points to fit\n"); return; }
-
   std::sort(res.begin(), res.end(),
             [](const RunResult& a, const RunResult& b) { return a.E < b.E; });
 
-  auto* g = new TGraphErrors();
+  auto* gMod = new TGraphErrors();   // intrinsic module resolution (headline)
+  auto* gMCP = new TGraphErrors();   // as-measured module - MCP
   for (size_t i = 0; i < res.size(); ++i) {
-    g->SetPoint(i, res[i].E, res[i].sigma);
-    g->SetPointError(i, 0., res[i].sigmaErr);
+    gMod->SetPoint(i, res[i].E, res[i].sigMod);
+    gMod->SetPointError(i, 0., res[i].sigModErr);
+    gMCP->SetPoint(i, res[i].E, res[i].sigMCP);
+    gMCP->SetPointError(i, 0., res[i].sigMCPErr);
   }
 
   auto* c = new TCanvas("c_timing", "RADiCAL timing resolution", 800, 600);
-  g->SetTitle("RADiCAL timing resolution;Beam energy E [GeV];#sigma_{t} [ps]");
-  g->SetMarkerStyle(20);
-  g->SetMarkerSize(1.3);
-  g->SetMarkerColor(kBlue + 1);
-  g->SetLineColor(kBlue + 1);
-  g->Draw("AP");
+  gMCP->SetTitle("RADiCAL timing resolution;Beam energy E [GeV];#sigma_{t} [ps]");
+  gMCP->SetMinimum(0.);
+  gMCP->SetMarkerStyle(24);
+  gMCP->SetMarkerColor(kGray + 1);
+  gMCP->SetLineColor(kGray + 1);
+  gMCP->Draw("AP");                  // frame (larger values) drawn first
+  gMod->SetMarkerStyle(20);
+  gMod->SetMarkerSize(1.3);
+  gMod->SetMarkerColor(kBlue + 1);
+  gMod->SetLineColor(kBlue + 1);
+  gMod->Draw("P SAME");
 
-  // fit  sigma = sqrt( a^2/E + b^2 )
+  // fit the intrinsic module resolution to  sigma = sqrt(a^2/E + b^2)
   auto* fit = new TF1("fit", "sqrt([0]*[0]/x + [1]*[1])", 20, 160);
-  fit->SetParameters(300., 20.);
+  fit->SetParameters(150., 18.);
   fit->SetParNames("a", "b");
   fit->SetLineColor(kBlue + 1);
-  g->Fit(fit, "Q");
+  gMod->Fit(fit, "Q");
   double a = fit->GetParameter(0), b = fit->GetParameter(1);
   double aErr = fit->GetParError(0), bErr = fit->GetParError(1);
+  fit->Draw("SAME");
 
-  // paper reference curve a = 256 ps*sqrt(GeV), b = 17.5 ps
   auto* paper = new TF1("paper", "sqrt([0]*[0]/x + [1]*[1])", 20, 160);
   paper->SetParameters(256., 17.5);
   paper->SetLineColor(kRed + 1);
   paper->SetLineStyle(2);
   paper->Draw("SAME");
 
-  double aPhys = a * sqrt(YIELD_SCALE);   // rough full-yield extrapolation
-
-  auto* leg = new TLegend(0.40, 0.65, 0.88, 0.88);
+  auto* leg = new TLegend(0.34, 0.60, 0.88, 0.88);
   leg->SetBorderSize(0);
-  leg->AddEntry(g, "GEANT4 (this work)", "p");
+  leg->AddEntry(gMod, "module (this work, reference removed)", "p");
   leg->AddEntry(fit, Form("fit: a=%.0f#pm%.0f, b=%.1f#pm%.1f ps", a, aErr, b, bErr), "l");
   leg->AddEntry(paper, "paper: a=256, b=17.5 ps", "l");
+  leg->AddEntry(gMCP, "module #minus MCP (as measured)", "p");
   leg->Draw();
-
-  TLatex tx; tx.SetNDC(); tx.SetTextSize(0.028); tx.SetTextColor(kGray + 2);
-  tx.DrawLatex(0.14, 0.20,
-               Form("yield-scaled run; a_{stoch}#times#sqrt{%.3f} #approx %.0f ps#sqrt{GeV}",
-                    YIELD_SCALE, aPhys));
 
   c->SaveAs("timing_resolution.png");
   c->SaveAs("timing_resolution.pdf");
 
-  printf("\n[Timing] sigma_t = a/sqrt(E) (+) b\n");
-  printf("   fitted a   = %.1f +/- %.1f  ps*sqrt(GeV)\n", a, aErr);
-  printf("   fitted b   = %.1f +/- %.1f  ps\n", b, bErr);
-  printf("   paper      : a = 256, b = 17.5 ps\n");
-  printf("   a extrapolated to full LYSO yield ~ %.0f ps*sqrt(GeV)\n", aPhys);
-  printf("   per-energy points:\n");
+  printf("\n[Timing] intrinsic module resolution:  sigma_t = a/sqrt(E) (+) b\n");
+  printf("   fitted a = %.1f +/- %.1f ps*sqrt(GeV),  b = %.1f +/- %.1f ps\n",
+         a, aErr, b, bErr);
+  printf("   paper    : a = 256, b = 17.5 ps\n");
+  printf("   %6s   %12s   %14s\n", "E[GeV]", "module[ps]", "module-MCP[ps]");
   for (auto& r : res)
-    printf("      E = %5.0f GeV   sigma_t = %6.1f +/- %4.1f ps\n",
-           r.E, r.sigma, r.sigmaErr);
+    printf("   %6.0f   %12.1f   %14.1f\n", r.E, r.sigMod, r.sigMCP);
 }
 
 // ---- entry point ---------------------------------------------------------

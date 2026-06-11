@@ -85,6 +85,7 @@ EOF
   analyze)
     DIR="${2:-$HERE/results/scan}"
     [ -d "$DIR" ] && ls "$DIR"/radical_run*.root >/dev/null 2>&1 || DIR="$BUILD/scan_out"
+    DIR="$(cd "$DIR" 2>/dev/null && pwd || echo "$DIR")"   # make absolute
     mkdir -p "$HERE/analysis/figures"
     echo ">> analyzing $DIR ..."
     ( cd "$HERE/analysis/figures" && root -l -b -q "$HERE/analysis/analyze.C(\"$DIR\")" )

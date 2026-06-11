@@ -30,7 +30,7 @@ class RadicalEventAction : public G4UserEventAction {
   // photo-electron thresholds for leading-edge timing (like a fixed-threshold
   // discriminator on the rising edge of the SiPM / MCP pulse).
   static constexpr G4int kSiPMThreshold = 3;  // 3rd detected p.e.
-  static constexpr G4int kMCPThreshold = 1;   // 1st detected p.e.
+  static constexpr G4int kMCPThreshold = 3;   // 3rd detected p.e. (robust leading edge)
 
  private:
   struct PD { G4int n = 0; G4double tFirst = 1.e9; };

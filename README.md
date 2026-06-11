@@ -184,15 +184,24 @@ Produces (in `analysis/figures/`):
   `t_module − t_MCP`, fitted to **σ_t = a/√E ⊕ b**, with the paper's
   (a = 256 ps√GeV, b = 17.5 ps) curve overlaid.
 
-The simulation reproduces the functional **shape** (steep 1/√E fall, constant
-floor) and lands within a factor of a few of the paper in absolute terms.
-The offset is expected and traceable to: the reduced scintillation yield-scale
-used for tractability (fewer p.e. → inflated stochastic term), the simplified
-MCP timing reference and photocathode model, the absence of electronic pulse
-shaping, and limited statistics (50 events/energy). For sharper numbers, raise
-`yieldScale`, lower the beam energy or increase the event count, and add more
-energy points. A single high-statistics 150 GeV run (`macros`-style, 60 events,
-no cap) already yields σ_t ≈ 70 ps.
+**Result.** The analysis reports the *intrinsic module* timing resolution (the
+quantity the paper quotes after removing its MCP reference) — the width of the
+`t_module` distribution, where `t_module = (t_down + t_up)/2` averages the
+upstream/downstream ends so the shower-depth jitter cancels. A higher-statistics
+scan (`macros/timing_scan_hi.mac`) reproduces **σ_t = a/√E ⊕ b** with
+**b ≈ 19 ps** (paper: 17.5 ps) and ~20–30 ps at high energy (paper: 27 ps at
+150 GeV). The smaller stochastic term (a ≈ 150 vs 256) reflects an idealized
+readout (no electronic noise, generous light yield).
+
+**A cautionary tale (the "76 ps" bug).** An early run reported σ ≈ 72–86 ps and
+looked far off. Decomposing the budget showed the *module* was already ~20 ps —
+the inflation came entirely from a broken MCP reference (σ ≈ 94 ps) caused by
+total internal reflection in a vacuum gap between the quartz radiator and the
+photocathode. Depositing the photocathode directly on the radiator (as in the
+real Hamamatsu R3809U-50) dropped the reference jitter to <1 ps, so the directly
+measured `σ(t_module − t_MCP)` collapsed onto the intrinsic ~20 ps. Lesson: when
+a resolution looks wrong, decompose it into its independent contributions before
+"fixing" the detector. (See `docs/` and `analysis/analyze.C`.)
 
 ## 7. Source layout
 

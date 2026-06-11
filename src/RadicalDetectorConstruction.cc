@@ -243,16 +243,20 @@ void RadicalDetectorConstruction::BuildBeamline(G4LogicalVolume* worldLV) {
     auto* tubeLV = new G4LogicalVolume(tube, M->Vacuum(), "MCPtube");
     new G4PVPlacement(nullptr, G4ThreeVector(0, 0, mcpZ), tubeLV,
                       "MCPtube_pv", worldLV, false, 0, fConfig.checkOverlaps);
-    // quartz entrance window (Cerenkov radiator for the crossing beam)
-    auto* win = new G4Tubs("MCPwindow", 0., 11. * mm, 1.25 * mm, 0., twopi);
+    // quartz Cerenkov radiator (thicker -> more prompt photons -> better timing)
+    const G4double winHalf = 2.5 * mm;  // 5 mm radiator
+    auto* win = new G4Tubs("MCPwindow", 0., 11. * mm, winHalf, 0., twopi);
     auto* winLV = new G4LogicalVolume(win, M->Quartz(), "MCPwindow");
-    new G4PVPlacement(nullptr, G4ThreeVector(0, 0, -tubeHalfZ + 1.25 * mm),
-                      winLV, "MCPwindow_pv", tubeLV, false, 0, fConfig.checkOverlaps);
-    // bialkali photocathode just behind the window
+    new G4PVPlacement(nullptr, G4ThreeVector(0, 0, -tubeHalfZ + winHalf), winLV,
+                      "MCPwindow_pv", tubeLV, false, 0, fConfig.checkOverlaps);
+    // bialkali photocathode deposited DIRECTLY on the radiator's back face
+    // (no vacuum gap -> no total-internal-reflection delay, like the real tube)
     fMcpCathodeLV =
         BuildPhotodetector("MCPcathode", 11. * mm, 0., 0.05 * mm, /*round*/ true);
-    new G4PVPlacement(nullptr, G4ThreeVector(0, 0, -tubeHalfZ + 2.6 * mm),
-                      fMcpCathodeLV, "MCPcathode_pv", tubeLV, false, 0, fConfig.checkOverlaps);
+    new G4PVPlacement(nullptr,
+                      G4ThreeVector(0, 0, -tubeHalfZ + 2. * winHalf + 0.05 * mm),
+                      fMcpCathodeLV, "MCPcathode_pv", tubeLV, false, 0,
+                      fConfig.checkOverlaps);
   }
 
   // --- Pb-glass backing calorimeter: 2x2 array, 4x4x40 cm total ----------
