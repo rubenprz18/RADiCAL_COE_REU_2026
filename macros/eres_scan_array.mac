@@ -1,0 +1,37 @@
+# eres_scan_array.mac
+# Same fast energy-only resolution scan as eres_scan.mac, but for a 3x3 array of
+# modules -> better TRANSVERSE shower containment (the paper's argument). eLYSO
+# in the output sums the LYSO energy over all 9 modules.
+/run/numberOfThreads 4
+/run/verbose 0
+/control/verbose 0
+/process/em/verbose 0
+/process/had/verbose 0
+
+/radical/geo/preset current
+/radical/geo/arrayNx 3
+/radical/geo/arrayNy 3
+/radical/geo/arrayTiling square
+/radical/geo/beamline true
+/radical/optical/yieldScale 0.000001
+/radical/optical/maxPhotons 5000
+/run/initialize
+
+/radical/beam/particle e-
+/radical/beam/sigmaEfrac 0.005
+/radical/beam/sigmaX 2 mm
+/radical/beam/sigmaY 2 mm
+/run/printProgress 200
+
+/radical/beam/energyGeV 25
+/run/beamOn 500
+/radical/beam/energyGeV 50
+/run/beamOn 500
+/radical/beam/energyGeV 75
+/run/beamOn 500
+/radical/beam/energyGeV 100
+/run/beamOn 500
+/radical/beam/energyGeV 125
+/run/beamOn 500
+/radical/beam/energyGeV 150
+/run/beamOn 500

@@ -211,6 +211,23 @@ measured `σ(t_module − t_MCP)` collapsed onto the intrinsic ~20 ps. Lesson: w
 a resolution looks wrong, decompose it into its independent contributions before
 "fixing" the detector. (See `docs/` and `analysis/analyze.C`.)
 
+### Energy resolution (σ_E/E vs E)
+
+`analyze.C` also fits the **energy resolution** σ_E/E = a/√E ⊕ b/E ⊕ c from the
+width of the per-event LYSO energy (`eLYSO`). Energy deposition is independent of
+optical photons, so `macros/eres_scan.mac` (and `eres_scan_array.mac`) run with
+the scintillation yield ≈ 0 for fast, high-statistics scans.
+
+- **Single module:** σ_E/E ≈ **12%/√E ⊕ 1.7%** — the stochastic term already
+  approaches the FCC-hh goal (10%), but the constant term is inflated by shower
+  leakage from a thin (25 X₀) module that is only ~1 Molière radius wide.
+- **3×3 array** (`eres_scan_array.mac`): σ_E/E ≈ **8.8%/√E ⊕ 0.9%** — transverse
+  containment improves **both** terms; the curve sits on the FCC-hh goal
+  (10%/√E ⊕ 0.3/E ⊕ 0.7%) at high energy. This reproduces the paper's argument
+  that an array is needed for the full EM energy resolution.
+
+`analysis/eres_compare.C` overlays the two (→ `energy_resolution_compare.png`).
+
 ## 7. Source layout
 
 ```

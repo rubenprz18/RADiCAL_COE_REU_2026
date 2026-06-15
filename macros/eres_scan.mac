@@ -1,0 +1,34 @@
+# eres_scan.mac
+# Energy-resolution scan. Energy deposition (eLYSO) comes from the calorimeter
+# sensitive detector and is INDEPENDENT of optical photons, so we set the
+# scintillation yield ~0 -> no optical tracking -> very fast -> high statistics.
+# Set the geometry preset / array before running this (defaults: current module).
+/run/numberOfThreads 4
+/run/verbose 0
+/control/verbose 0
+/process/em/verbose 0
+/process/had/verbose 0
+
+/radical/geo/beamline true
+/radical/optical/yieldScale 0.000001
+/radical/optical/maxPhotons 5000
+/run/initialize
+
+/radical/beam/particle e-
+/radical/beam/sigmaEfrac 0.005
+/radical/beam/sigmaX 2 mm
+/radical/beam/sigmaY 2 mm
+/run/printProgress 200
+
+/radical/beam/energyGeV 25
+/run/beamOn 500
+/radical/beam/energyGeV 50
+/run/beamOn 500
+/radical/beam/energyGeV 75
+/run/beamOn 500
+/radical/beam/energyGeV 100
+/run/beamOn 500
+/radical/beam/energyGeV 125
+/run/beamOn 500
+/radical/beam/energyGeV 150
+/run/beamOn 500

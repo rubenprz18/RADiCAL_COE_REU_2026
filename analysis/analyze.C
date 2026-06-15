@@ -273,6 +273,104 @@ static void Timing(const std::vector<TString>& files) {
     printf("   %6.0f   %12.1f   %14.1f\n", r.E, r.sigMod, r.sigMCP);
 }
 
+// =========================================================================
+// (3) energy resolution  sigma_E/E = a/sqrt(E) (+) b/E (+) c
+//     E_meas = total energy sampled in the LYSO (eLYSO). The fractional width
+//     sigma/mean is the calorimeter energy resolution (calibration cancels).
+// =========================================================================
+struct ERes { double E = 0, res = 0, resErr = 0, mean = 0; };
+
+static ERes FitEnergy(TFile* file) {
+  ERes r;
+  TTree* ev = (TTree*)file->Get("event");
+  if (!ev) return r;
+  double beamE, eLYSO;
+  ev->SetBranchAddress("beamE", &beamE);
+  ev->SetBranchAddress("eLYSO", &eLYSO);
+  std::vector<double> e; double sumE = 0; Long64_t n = ev->GetEntries();
+  for (Long64_t i = 0; i < n; ++i) { ev->GetEntry(i); sumE += beamE; if (eLYSO > 0) e.push_back(eLYSO); }
+  r.E = (n ? sumE / n : 0.) / 1000.;
+  if (e.size() < 10) return r;
+
+  std::sort(e.begin(), e.end());
+  double med = e[e.size() / 2];
+  std::vector<double> ad; for (double x : e) ad.push_back(std::fabs(x - med));
+  std::sort(ad.begin(), ad.end());
+  double rsig = std::max(1.4826 * ad[ad.size() / 2], 1.0);
+  double win = std::max(4 * rsig, 10.0);
+  static int uid = 0; ++uid;
+  auto* h = new TH1D(Form("heE_%d", uid),
+                     Form("%.0f GeV;E_{LYSO} [MeV];events", r.E),
+                     60, med - win, med + win);
+  for (double x : e) h->Fill(x);
+  h->Fit("gaus", "Q");                 // note: "Q" not "QR" (see FitGauss)
+  TF1* g = h->GetFunction("gaus");
+  for (int it = 0; it < 3 && g; ++it) {
+    double m = g->GetParameter(1), s = g->GetParameter(2);
+    h->Fit("gaus", "Q", "", m - 2 * s, m + 2 * s);
+    g = h->GetFunction("gaus");
+  }
+  if (g) {
+    double mu = g->GetParameter(1), s = g->GetParameter(2);
+    if (mu > 0) { r.mean = mu; r.res = s / mu; r.resErr = r.res / std::sqrt(2.0 * e.size()); }
+  }
+  return r;
+}
+
+static void EnergyResolution(const std::vector<TString>& files) {
+  gStyle->SetOptStat(0); gStyle->SetOptFit(0);
+  std::vector<ERes> res;
+  for (auto& fn : files) {
+    TFile* f = TFile::Open(fn);
+    if (!f || f->IsZombie()) continue;
+    ERes r = FitEnergy(f);
+    if (r.res > 0) res.push_back(r);
+  }
+  if (res.size() < 2) { printf("[Eres] too few points to fit\n"); return; }
+  std::sort(res.begin(), res.end(), [](const ERes& a, const ERes& b) { return a.E < b.E; });
+
+  auto* g = new TGraphErrors();
+  for (size_t i = 0; i < res.size(); ++i) {
+    g->SetPoint(i, res[i].E, 100. * res[i].res);
+    g->SetPointError(i, 0., 100. * res[i].resErr);
+  }
+  auto* c = new TCanvas("c_eres", "RADiCAL energy resolution", 800, 600);
+  g->SetTitle("RADiCAL energy resolution (single module, E_{LYSO});Beam energy E [GeV];#sigma_{E}/E [%]");
+  g->SetMinimum(0.);
+  g->SetMarkerStyle(20); g->SetMarkerSize(1.3);
+  g->SetMarkerColor(kBlue + 1); g->SetLineColor(kBlue + 1);
+  g->Draw("AP");
+
+  // fit (percent units, E in GeV):  sqrt(a^2/E + b^2/E^2 + c^2)
+  auto* fit = new TF1("efit", "sqrt([0]*[0]/x + [1]*[1]/(x*x) + [2]*[2])", 20, 160);
+  fit->SetParameters(40., 5., 1.); fit->SetParNames("a", "b", "c");
+  fit->SetLineColor(kBlue + 1);
+  g->Fit(fit, "Q");
+  double a = fit->GetParameter(0), b = fit->GetParameter(1), cc = fit->GetParameter(2);
+  fit->Draw("SAME");
+
+  // FCC-hh goal: 10%/sqrt(E) (+) 0.3/E (GeV) (+) 0.7%  ->  in %: (10, 30, 0.7)
+  auto* goal = new TF1("egoal", "sqrt([0]*[0]/x + [1]*[1]/(x*x) + [2]*[2])", 20, 160);
+  goal->SetParameters(10., 30., 0.7);
+  goal->SetLineColor(kRed + 1); goal->SetLineStyle(2);
+  goal->Draw("SAME");
+
+  auto* leg = new TLegend(0.34, 0.66, 0.88, 0.88);
+  leg->SetBorderSize(0);
+  leg->AddEntry(g, "single module, E_{LYSO} (this work)", "p");
+  leg->AddEntry(fit, Form("fit: a=%.0f%%, b=%.0f, c=%.1f%%", a, b, cc), "l");
+  leg->AddEntry(goal, "FCC-hh goal: 10%/#sqrt{E} #oplus 0.3/E #oplus 0.7%", "l");
+  leg->Draw();
+
+  c->SaveAs("energy_resolution.png");
+  c->SaveAs("energy_resolution.pdf");
+
+  printf("\n[Energy] sigma_E/E = a/sqrt(E) (+) b/E (+) c   (E_meas = LYSO sampling energy)\n");
+  printf("   fit: a = %.1f %%, b = %.1f, c = %.2f %%   (goal: 10, 30, 0.7)\n", a, b, cc);
+  printf("   %6s   %12s\n", "E[GeV]", "sigma_E/E[%]");
+  for (auto& r : res) printf("   %6.0f   %12.2f\n", r.E, 100. * r.res);
+}
+
 // ---- entry point ---------------------------------------------------------
 void analyze(const char* dir = "build/scan_out") {
   std::vector<TString> files = FindFiles(dir);
@@ -283,4 +381,5 @@ void analyze(const char* dir = "build/scan_out") {
   printf("Found %zu run files in %s\n", files.size(), dir);
   Fig7(files);
   Timing(files);
+  EnergyResolution(files);
 }
