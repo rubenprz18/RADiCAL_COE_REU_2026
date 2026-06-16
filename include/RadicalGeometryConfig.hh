@@ -28,7 +28,9 @@ enum class TileShape { Square, Rectangle, Hexagon };
 // Capillary hole pattern in the tile cross section.
 //   Quincunx5 : 4 corner holes + 1 centre hole              (Fig. 2, current)
 //   Grid9     : 3x3 grid of 9 holes                         (Fig. 28, enhanced)
-enum class CapillaryLayout { Quincunx5, Grid9 };
+//   Hex7      : centre + 6 in a hexagonal ring (alternating T/E type)
+//               (FCC-MIT-2024 proposed hexagonal cell, James Wetzel)
+enum class CapillaryLayout { Quincunx5, Grid9, Hex7 };
 
 // How multiple modules are packed into an array.
 enum class ArrayTiling { Square, Hex };

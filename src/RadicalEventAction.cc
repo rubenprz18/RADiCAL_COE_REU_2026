@@ -137,10 +137,11 @@ void RadicalEventAction::EndOfEventAction(const G4Event* evt) {
     ana->FillNtupleIColumn(radana::kChannel, 3, npe);
     ana->FillNtupleDColumn(radana::kChannel, 4, tHit);
     ana->AddNtupleRow(radana::kChannel);
-    // require enough p.e. to form a stable threshold time
-    if (npe >= kSiPMThreshold) {
-      if (channel >= 50) { tUpSum += tHit; ++nUp; }   // upstream end
-      else               { tDownSum += tHit; ++nDown; }
+    // Timing uses the fast T-type capillaries only (channel < 100); the slow
+    // LuAG E-type channels (>= 100) contribute light/energy but not timing.
+    if (npe >= kSiPMThreshold && channel < 100) {
+      if (channel >= 50) { tUpSum += tHit; ++nUp; }   // T-type upstream end
+      else               { tDownSum += tHit; ++nDown; }  // T-type downstream end
     }
   }
   const G4double tDown = nDown ? tDownSum / nDown : 0.;

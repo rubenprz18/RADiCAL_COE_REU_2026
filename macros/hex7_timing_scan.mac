@@ -1,0 +1,37 @@
+# hex7_timing_scan.mac
+# Timing scan for the FCC-MIT-2024 hexagonal cell (hexagon tile + 7-capillary
+# hex ring). Full optical tracking, graded statistics. Compare to the square
+# module's timing_scan_hi.mac result.
+/run/numberOfThreads 4
+/run/verbose 0
+/control/verbose 0
+/process/em/verbose 0
+/process/had/verbose 0
+
+/radical/geo/preset current
+/radical/geo/tileShape hexagon
+/radical/geo/hexR 8.08 mm
+/radical/geo/layout hex7
+/radical/geo/beamline true
+/radical/optical/yieldScale 0.0003
+/radical/optical/maxPhotons 0
+/run/initialize
+
+/radical/beam/particle e-
+/radical/beam/sigmaEfrac 0.005
+/radical/beam/sigmaX 2 mm
+/radical/beam/sigmaY 2 mm
+/run/printProgress 50
+
+/radical/beam/energyGeV 25
+/run/beamOn 100
+/radical/beam/energyGeV 50
+/run/beamOn 90
+/radical/beam/energyGeV 75
+/run/beamOn 80
+/radical/beam/energyGeV 100
+/run/beamOn 70
+/radical/beam/energyGeV 125
+/run/beamOn 60
+/radical/beam/energyGeV 150
+/run/beamOn 60

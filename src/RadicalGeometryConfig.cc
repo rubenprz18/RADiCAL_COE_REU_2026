@@ -65,7 +65,20 @@ void RadicalGeometryConfig::RebuildCapillaries() {
   const G4double corOD   = 1.15 * CLHEP::mm;   // 1150 um capillary OD
   const G4double cenHole = 0.90 * CLHEP::mm;   // 1 x phi 0.9 mm centre hole
 
-  if (layout == CapillaryLayout::Quincunx5) {
+  if (layout == CapillaryLayout::Hex7) {
+    // FCC-MIT-2024 proposed hexagonal cell: a centre capillary + 6 in a
+    // hexagonal ring, alternating T-type (timing) and E-type (energy).
+    // Ring radius is kept inside the ~4.5 mm shower-max region.
+    const G4double ringR = (tileSizeX <= 15.0 * CLHEP::mm)
+                               ? 4.0 * CLHEP::mm
+                               : 0.28 * tileSizeX;
+    addCap(0., 0., CapType::TType, corHole, corOD);  // centre (read out)
+    for (int k = 0; k < 6; ++k) {
+      const G4double a = (60.0 * k) * CLHEP::deg;     // 0,60,...,300 deg
+      const CapType t = (k % 2 == 0) ? CapType::TType : CapType::EType;
+      addCap(ringR * std::cos(a), ringR * std::sin(a), t, corHole, corOD);
+    }
+  } else if (layout == CapillaryLayout::Quincunx5) {
     addCap(-cornerOffset, +cornerOffset, CapType::TType, corHole, corOD);
     addCap(+cornerOffset, +cornerOffset, CapType::TType, corHole, corOD);
     addCap(-cornerOffset, -cornerOffset, CapType::TType, corHole, corOD);

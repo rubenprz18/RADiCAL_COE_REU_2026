@@ -169,12 +169,16 @@ G4LogicalVolume* RadicalDetectorConstruction::BuildModuleLogical() {
   capIdx = 0;
   for (const auto& c : cfg.capillaries) {
     if (c.type != CapType::Calibration) {
-      // downstream channel = capIdx, upstream channel = capIdx + 50
+      // Channel encoding lets the analysis use fast T-type capillaries for
+      // timing and all capillaries for energy/light:
+      //   T-type:  downstream = capIdx,        upstream = capIdx + 50
+      //   E-type:  downstream = capIdx + 100,  upstream = capIdx + 150
+      const G4int base = (c.type == CapType::EType) ? capIdx + 100 : capIdx;
       new G4PVPlacement(nullptr, G4ThreeVector(c.x, c.y, +zDown), fSipmLV,
-                        "SiPM_pv", envLV, false, capIdx, fConfig.checkOverlaps);
+                        "SiPM_pv", envLV, false, base, fConfig.checkOverlaps);
       if (cfg.sipmBothEnds)
         new G4PVPlacement(nullptr, G4ThreeVector(c.x, c.y, -zDown), fSipmLV,
-                          "SiPM_pv", envLV, false, capIdx + 50, fConfig.checkOverlaps);
+                          "SiPM_pv", envLV, false, base + 50, fConfig.checkOverlaps);
     }
     ++capIdx;
   }

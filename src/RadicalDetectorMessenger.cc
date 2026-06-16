@@ -34,9 +34,9 @@ RadicalDetectorMessenger::RadicalDetectorMessenger(
   fShape->SetCandidates("square rectangle hexagon");
 
   fLayout = new G4UIcmdWithAString("/radical/geo/layout", this);
-  fLayout->SetGuidance("Capillary layout: quincunx5 | grid9");
+  fLayout->SetGuidance("Capillary layout: quincunx5 | grid9 | hex7");
   fLayout->SetParameterName("layout", false);
-  fLayout->SetCandidates("quincunx5 grid9");
+  fLayout->SetCandidates("quincunx5 grid9 hex7");
 
   fTiling = new G4UIcmdWithAString("/radical/geo/arrayTiling", this);
   fTiling->SetGuidance("Array tiling: square | hex");
@@ -116,7 +116,8 @@ void RadicalDetectorMessenger::SetNewValue(G4UIcommand* cmd, G4String v) {
                                          : TileShape::Square;
   } else if (cmd == fLayout) {
     cfg.layout = (v == "grid9") ? CapillaryLayout::Grid9
-                                : CapillaryLayout::Quincunx5;
+                 : (v == "hex7") ? CapillaryLayout::Hex7
+                                 : CapillaryLayout::Quincunx5;
     cfg.RebuildCapillaries();
   } else if (cmd == fTiling) {
     cfg.arrayTiling = (v == "hex") ? ArrayTiling::Hex : ArrayTiling::Square;

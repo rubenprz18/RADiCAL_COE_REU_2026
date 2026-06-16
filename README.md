@@ -228,6 +228,28 @@ the scintillation yield ≈ 0 for fast, high-statistics scans.
 
 `analysis/eres_compare.C` overlays the two (→ `energy_resolution_compare.png`).
 
+### Hexagonal cell (FCC-MIT-2024 proposed geometry)
+
+The FCC-MIT-2024 presentation (J. Wetzel) proposes a **hexagonal module** with a
+**7-capillary layout**: a centre capillary + a hexagonal ring of 6 alternating
+T-type / E-type. Built with `/radical/geo/tileShape hexagon` +
+`/radical/geo/layout hex7` (schematic: `analysis/figures/hex7_layout.png`; scan:
+`macros/hex7_timing_scan.mac`; comparison: `analysis/hex_compare.C` →
+`hex_vs_square.png`). Findings vs the square module:
+
+- **~5× more detected light** — the central capillary sits at the shower core
+  (highest light density), which the square's 4 corner capillaries miss.
+- **Better timing**, especially at low/mid energy where photon statistics
+  dominate (25 GeV: ~33 ps vs ~44 ps), reaching ~12–19 ps at high energy.
+- Single-module *energy* resolution is slightly worse (~13.6% vs 11.8%
+  stochastic) — a 14 mm flat-to-flat hexagon has ~13% less area than a 14 mm
+  square (more transverse leakage) — but hexagons tile a plane with no gaps,
+  the natural cell for a close-packed array.
+
+Timing uses the fast T-type (DSB1) channels only; the slower LuAG E-type
+channels carry energy/light. The capillary type is encoded in the SiPM channel
+number (T-type < 100, E-type ≥ 100).
+
 ## 7. Source layout
 
 ```
