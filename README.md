@@ -250,6 +250,13 @@ Timing uses the fast T-type (DSB1) channels only; the slower LuAG E-type
 channels carry energy/light. The capillary type is encoded in the SiPM channel
 number (T-type < 100, E-type ≥ 100).
 
+Dedicated hexagon graphs are in **`analysis/figures/hex/`**:
+`timing_resolution.png` — σ_t = a/√E ⊕ b with **a ≈ 171 ps·√GeV, b ≈ 0**
+(lower stochastic term than the square's ~210 and the paper's 256, from the ~5×
+light; ~12–20 ps at high energy); and `energy_resolution.png` — σ_E/E ≈
+**14%/√E ⊕ 1.7%**. (Timing from `hex7_timing`, energy from the clean `eres_hex7`
+500-event scan.)
+
 ## 7. Source layout
 
 ```
